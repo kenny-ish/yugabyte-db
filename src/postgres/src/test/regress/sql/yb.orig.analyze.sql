@@ -177,6 +177,15 @@ SELECT relname, attname, reltuples, stadistinct, stanullfrac
 
 DROP TABLE t_part;
 
+-- A partitioned parent must not consume part of its children's sample.
+SET default_statistics_target = 1;
+CREATE TABLE analyze_parent (k int) PARTITION BY RANGE (k);
+CREATE TABLE analyze_child PARTITION OF analyze_parent DEFAULT;
+INSERT INTO analyze_parent SELECT generate_series(0, 299);
+ANALYZE VERBOSE analyze_parent;
+DROP TABLE analyze_parent;
+RESET default_statistics_target;
+
 -- ANALYZE is allowed in a read-only transaction, including the catalog version
 -- increment it performs.
 \set db_oid 'CASE WHEN (SELECT count(*) FROM pg_yb_catalog_version) = 1 THEN 1 ELSE (SELECT oid FROM pg_database WHERE datname = current_database()) END'

@@ -1551,7 +1551,19 @@ acquire_inherited_sample_rows(Relation onerel, int elevel,
 		}
 
 		/* Check table type (MATVIEW can't happen, but might as well allow) */
-		if (IsYBRelation(childrel))
+		if (childrel->rd_rel->relkind == RELKIND_PARTITIONED_TABLE)
+		{
+			/*
+			 * Partitioned tables do not contain rows of their own.  Do not
+			 * include them in the sample-size calculation below.
+			 */
+			if (childrel != onerel)
+				table_close(childrel, AccessShareLock);
+			else
+				table_close(childrel, NoLock);
+			continue;
+		}
+		else if (IsYBRelation(childrel))
 		{
 			/* Use the YB row acquisition function */
 			acquirefunc = yb_acquire_sample_rows;
